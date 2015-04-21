@@ -26,16 +26,41 @@ import UIKit
     optional func didMoveToPage(controller: UIViewController, index: Int)
 }
 
+protocol Math {
+    func half()->Double
+    func half()->CGFloat
+}
+
+extension Double : Math {
+    func half() -> Double {
+        return self/2.0
+    }
+    func half() -> CGFloat {
+        return CGFloat(self)/2.0
+    }
+}
+
+extension CGFloat : Math {
+    func half() -> Double {
+        return Double(self)/2.0
+    }
+    func half() -> CGFloat {
+        return self/2.0
+    }
+}
+
 class MenuItemView: UIView {
     // MARK: - Menu item view
     
     var titleLabel : UILabel?
     var menuItemSeparator : UIView?
-    
+
     func setUpMenuItemView(menuItemWidth: CGFloat, menuScrollViewHeight: CGFloat, indicatorHeight: CGFloat, separatorPercentageHeight: CGFloat, separatorWidth: CGFloat, separatorRoundEdges: Bool, menuItemSeparatorColor: UIColor) {
         titleLabel = UILabel(frame: CGRectMake(0.0, 0.0, menuItemWidth, menuScrollViewHeight - indicatorHeight))
         titleLabel?.numberOfLines = 2
-        menuItemSeparator = UIView(frame: CGRectMake(menuItemWidth - (separatorWidth / 2), floor(menuScrollViewHeight * ((1.0 - separatorPercentageHeight) / 2.0)), separatorWidth, floor(menuScrollViewHeight * separatorPercentageHeight)))
+        titleLabel?.adjustsFontSizeToFitWidth = true
+        titleLabel?.minimumScaleFactor = 0.5;
+        menuItemSeparator = UIView(frame: CGRectMake(menuItemWidth - separatorWidth.half(), floor(menuScrollViewHeight * ((1.0 - separatorPercentageHeight) / 2.0)), separatorWidth, floor(menuScrollViewHeight * separatorPercentageHeight)))
         menuItemSeparator!.backgroundColor = menuItemSeparatorColor
         
         if separatorRoundEdges {
@@ -59,21 +84,25 @@ class MenuItemView: UIView {
 
 // MARK: - CAPSPageMenuOptions
 public struct CAPSPageMenuOptions {
+    enum BarPosition {
+        case Top
+        case Bottom
+    }
     var selectionIndicatorHeight : CGFloat = 3.0
     var menuItemSeparatorWidth : CGFloat = 0.5
     lazy var scrollMenuBackgroundColor : UIColor = UIColor.blackColor()
     lazy var viewBackgroundColor : UIColor = UIColor.whiteColor()
     lazy var bottomMenuHairlineColor : UIColor = UIColor.whiteColor()
-    lazy var selectionIndicatorColor : UIColor = UIColor.lightGrayColor()
+    lazy var selectionIndicatorColor : UIColor = UIColor(red: 0, green: 122/255.0, blue: 1, alpha: 1)
     lazy var menuItemSeparatorColor : UIColor = UIColor.lightGrayColor()
     var menuMargin : CGFloat = 15.0
-    var menuHeight : CGFloat = 34.0 {
+    var menuHeight : CGFloat = 55.0 {
         didSet {
             hideTopMenuBar = menuHeight == 0
         }
     }
-    lazy var selectedMenuItemLabelColor : UIColor = UIColor.whiteColor()
-    lazy var unselectedMenuItemLabelColor : UIColor = UIColor.lightGrayColor()
+    lazy var selectedMenuItemLabelColor : UIColor = UIColor(red: 0, green: 122/255.0, blue: 1, alpha: 1)
+    lazy var unselectedMenuItemLabelColor : UIColor = UIColor(red: 69/255.0, green: 69/255.0, blue: 76/255.0, alpha: 1)
     var useMenuLikeSegmentedControl : Bool = false
     var menuItemSeparatorRoundEdges : Bool = false
     lazy var menuItemFont : UIFont = UIFont.systemFontOfSize(15.0)
@@ -91,36 +120,37 @@ public struct CAPSPageMenuOptions {
             }
         }
     }
+    var barPosition = BarPosition.Top
 }
 
 public class CAPSPageMenu: UIViewController, UIScrollViewDelegate, UIGestureRecognizerDelegate {
     
     // MARK: - Properties
     
-    let menuScrollView = UIScrollView()
-    let controllerScrollView = UIScrollView()
+    private let menuScrollView = UIScrollView()
+    private let controllerScrollView = UIScrollView()
     private(set) var controllerArray : [UIViewController] = []
     private var menuItems : [MenuItemView] = []
     private var menuItemWidths : [CGFloat] = []
     private var pageMenuOptions = CAPSPageMenuOptions()
     private var totalMenuItemWidthIfDifferentWidths : CGFloat = 0.0
-    var startingMenuMargin : CGFloat = 0.0
-    var selectionIndicatorView : UIView = UIView()
-    var currentPageIndex : Int = 0
-    var lastPageIndex : Int = 0
-    var currentOrientationIsPortrait : Bool = true
-    var pageIndexForOrientationChange : Int = 0
-    var didLayoutSubviewsAfterRotation : Bool = false
-    var didScrollAlready : Bool = false
-    var lastControllerScrollViewContentOffset : CGFloat = 0.0
-    var lastScrollDirection : CAPSPageMenuScrollDirection = .Other
-    var startingPageForScroll : Int = 0
-    var didTapMenuItemToScroll : Bool = false
-    var pagesAddedDictionary : [Int : Int] = [:]
+    private var startingMenuMargin : CGFloat = 0.0
+    private var selectionIndicatorView : UIView = UIView()
+    private(set) var currentPageIndex : Int = 0
+    private var lastPageIndex : Int = 0
+    private var currentOrientationIsPortrait : Bool = true
+    private var pageIndexForOrientationChange : Int = 0
+    private var didLayoutSubviewsAfterRotation : Bool = false
+    private var didScrollAlready : Bool = false
+    private var lastControllerScrollViewContentOffset : CGFloat = 0.0
+    private var lastScrollDirection : CAPSPageMenuScrollDirection = .Other
+    private var startingPageForScroll : Int = 0
+    private var didTapMenuItemToScroll : Bool = false
+    private var pagesAddedDictionary : [Int : Int] = [:]
     
     public weak var delegate : CAPSPageMenuDelegate?
     
-    var tapTimer : NSTimer?
+    private var tapTimer : NSTimer?
     
     enum CAPSPageMenuScrollDirection : Int {
         case Left
@@ -135,7 +165,7 @@ public class CAPSPageMenu: UIViewController, UIScrollViewDelegate, UIGestureReco
     
     :param: viewControllers List of view controllers that must be subclasses of UIViewController
     :param: frame Frame for page menu view
-    :param: options Dictionary holding any customization options user might want to set
+    :param: initOptions customization options user might want to set
     */
     
     public init(viewControllers : [UIViewController],frame: CGRect,initOptions : CAPSPageMenuOptions) {
@@ -495,7 +525,7 @@ public class CAPSPageMenu: UIViewController, UIScrollViewDelegate, UIGestureReco
     public func scrollViewDidEndDecelerating(scrollView: UIScrollView) {
         if scrollView.isEqual(controllerScrollView) {
             // Call didMoveToPage delegate function
-            var currentController : UIViewController = controllerArray[currentPageIndex] as! UIViewController
+            var currentController = controllerArray[currentPageIndex]
             delegate?.didMoveToPage?(currentController, index: currentPageIndex)
             
             // Remove all but current page after decelerating
@@ -516,7 +546,7 @@ public class CAPSPageMenu: UIViewController, UIScrollViewDelegate, UIGestureReco
     
     func scrollViewDidEndTapScrollingAnimation() {
         // Call didMoveToPage delegate function
-        var currentController : UIViewController = controllerArray[currentPageIndex] as! UIViewController
+        var currentController : UIViewController = controllerArray[currentPageIndex]
         delegate?.didMoveToPage?(currentController, index: currentPageIndex)
         
         // Remove all but current page after decelerating
@@ -663,10 +693,10 @@ public class CAPSPageMenu: UIViewController, UIScrollViewDelegate, UIGestureReco
     // MARK: - Remove/Add Page
     func addPageAtIndex(index : Int) {
         // Call didMoveToPage delegate function
-        var currentController : UIViewController = controllerArray[index] as! UIViewController
+        var currentController = controllerArray[index]
         delegate?.willMoveToPage?(currentController, index: index)
         
-        var newVC : UIViewController = controllerArray[index] as! UIViewController
+        var newVC = controllerArray[index]
         
         newVC.willMoveToParentViewController(self)
         
@@ -678,7 +708,7 @@ public class CAPSPageMenu: UIViewController, UIScrollViewDelegate, UIGestureReco
     }
     
     func removePageAtIndex(index : Int) {
-        var oldVC : UIViewController = controllerArray[index] as! UIViewController
+        var oldVC = controllerArray[index]
         
         oldVC.willMoveToParentViewController(nil)
         
