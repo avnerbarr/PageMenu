@@ -34,7 +34,7 @@ class ViewController: UIViewController {
         var controllerArray : [UIViewController] = []
         
         var controller1 : TestTableViewController = TestTableViewController(nibName: "TestTableViewController", bundle: nil)
-        controller1.title = "FRIENDS"
+        controller1.title = "FRIENDS in a very long"
         controllerArray.append(controller1)
         var controller2 : TestCollectionViewController = TestCollectionViewController(nibName: "TestCollectionViewController", bundle: nil)
         controller2.title = "MOOD"
@@ -57,8 +57,8 @@ class ViewController: UIViewController {
             "centerMenuItems": true]
         
         // Initialize scroll menu
-        pageMenu = CAPSPageMenu(viewControllers: controllerArray, frame: CGRectMake(0.0, 0.0, self.view.frame.width, self.view.frame.height), options: parameters)
-        
+//        pageMenu = CAPSPageMenu(viewControllers: controllerArray, frame: CGRectMake(0.0, 0.0, self.view.frame.width, self.view.frame.height), options: parameters)
+        pageMenu = CAPSPageMenu(viewControllers: controllerArray, frame: self.view.bounds, initOptions: CAPSPageMenuOptions())
         self.view.addSubview(pageMenu!.view)
     }
     
